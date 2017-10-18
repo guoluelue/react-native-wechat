@@ -150,12 +150,6 @@ RCT_EXPORT_METHOD(shareToSession:(NSDictionary *)data
     [self shareToWeixinWithData:data scene:WXSceneSession callback:callback];
 }
 
-RCT_EXPORT_METHOD(shareToFavorite:(NSDictionary *)data
-                  :(RCTResponseSenderBlock)callback)
-{
-    [self shareToWeixinWithData:data scene:WXSceneFavorite callback:callback];
-}
-
 RCT_EXPORT_METHOD(pay:(NSDictionary *)data
                   :(RCTResponseSenderBlock)callback)
 {
@@ -250,7 +244,7 @@ RCT_EXPORT_METHOD(pay:(NSDictionary *)data
                 } else {
                     WXImageObject *imageObject = [WXImageObject object];
                     imageObject.imageData = UIImagePNGRepresentation(image);
-                    
+
                     [self shareToWeixinWithMediaMessage:aScene
                                                   Title:title
                                             Description:description
@@ -260,7 +254,7 @@ RCT_EXPORT_METHOD(pay:(NSDictionary *)data
                                              ThumbImage:aThumbImage
                                                MediaTag:mediaTagName
                                                callBack:callback];
-                    
+
                 }
             }];
         } else if ([type isEqualToString:RCTWXShareTypeFile]) {
@@ -280,6 +274,53 @@ RCT_EXPORT_METHOD(pay:(NSDictionary *)data
                                      ThumbImage:aThumbImage
                                        MediaTag:mediaTagName
                                        callBack:callback];
+
+        } else if ([type isEqualToString:RCTWXShareTypeMiniProgram]) {
+            /*小程序类型(by gh on 17/10/16)*/
+
+            NSURL *hdUrl = [NSURL URLWithString:aData[RCTWXShareTypeHdImageDataUrl]];
+            NSURLRequest *hdImageRequest = [NSURLRequest requestWithURL:hdUrl];
+            [self.bridge.imageLoader loadImageWithURLRequest:hdImageRequest callback:^(NSError *error, UIImage *hdImage) {
+                WXMiniProgramObject *miniProgramObject = [WXMiniProgramObject object];
+                miniProgramObject.webpageUrl = aData[@"webpageUrl"];
+                miniProgramObject.userName = aData[@"userName"];
+                miniProgramObject.path = aData[@"path"];
+
+                if (hdImage == nil) {
+                    miniProgramObject.hdImageData = nil;
+                }
+                else {
+                    // NSData *thumbData = UIImagePNGRepresentation(hdImage);
+                    NSData *thumbData = UIImageJPEGRepresentation(hdImage, 0.7);
+                    miniProgramObject.hdImageData = thumbData;
+                }
+
+                [self shareToWeixinWithMediaMessage:aScene
+                                              Title:title
+                                        Description:description
+                                             Object:miniProgramObject
+                                         MessageExt:messageExt
+                                      MessageAction:messageAction
+                                         ThumbImage:aThumbImage
+                                           MediaTag:mediaTagName
+                                           callBack:callback];
+            }];
+
+            // WXMiniProgramObject *miniProgramObject = [WXMiniProgramObject new];
+            // miniProgramObject.webpageUrl = aData[@"webpageUrl"];
+            // miniProgramObject.userName = aData[@"userName"];
+            // miniProgramObject.path = aData[@"path"];
+            // miniProgramObject.hdImageData = aData[@"hdImageData"];;
+
+            // [self shareToWeixinWithMediaMessage:aScene
+            //                   Title:title
+            //             Description:description
+            //                  Object:miniProgramObject
+            //              MessageExt:messageExt
+            //           MessageAction:messageAction
+            //              ThumbImage:aThumbImage
+            //                MediaTag:mediaTagName
+            //                callBack:callback];
 
         } else {
             callback(@[@"message type unsupported"]);
@@ -301,7 +342,6 @@ RCT_EXPORT_METHOD(pay:(NSDictionary *)data
     } else {
         [self shareToWeixinWithData:aData thumbImage:nil scene:aScene callBack:aCallBack];
     }
-
 }
 
 - (void)shareToWeixinWithTextMessage:(int)aScene
@@ -357,7 +397,7 @@ RCT_EXPORT_METHOD(pay:(NSDictionary *)data
 	if([resp isKindOfClass:[SendMessageToWXResp class]])
 	{
 	    SendMessageToWXResp *r = (SendMessageToWXResp *)resp;
-    
+
 	    NSMutableDictionary *body = @{@"errCode":@(r.errCode)}.mutableCopy;
 	    body[@"errStr"] = r.errStr;
 	    body[@"lang"] = r.lang;
@@ -372,7 +412,7 @@ RCT_EXPORT_METHOD(pay:(NSDictionary *)data
 	    body[@"lang"] = r.lang;
 	    body[@"country"] =r.country;
 	    body[@"type"] = @"SendAuth.Resp";
-    
+
 	    if (resp.errCode == WXSuccess)
 	    {
 	        [body addEntriesFromDictionary:@{@"appid":self.appId, @"code" :r.code}];
